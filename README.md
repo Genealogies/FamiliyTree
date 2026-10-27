@@ -1,5 +1,0 @@
-# KotlinMultiPlatform
-
-### iOS
-
-### Android
