@@ -1,4 +1,4 @@
-package com.example.kmpdashboard
+package com.hannes.familytree
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

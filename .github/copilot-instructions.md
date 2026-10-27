@@ -2,12 +2,12 @@
 
 ## Project
 
-- This is a Kotlin Multiplatform app named `KmpDashboardApp`, using Compose Multiplatform for Android and iOS.
-- The shared app UI and navigation live in `composeApp/src/commonMain/kotlin/com/example/kmpdashboard/`.
+- This is a Kotlin Multiplatform app named `FamilyTree`, using Compose Multiplatform for Android and iOS.
+- The shared app UI and navigation live in `hannes`.
 - Android-specific entry-point code is in `composeApp/src/androidMain/`; iOS-specific Kotlin code is in `composeApp/src/iosMain/`. The native iOS app and its Xcode project are under `iosApp/`.
 - The iOS app uses a SwiftUI entry point to host the shared Compose UI. Its Xcode build invokes Gradle to embed and sign the Kotlin framework.
 - The iOS deployment target is iOS 15.0; the Kotlin framework targets device and simulator architectures.
-- The Android application namespace and Kotlin package are `com.example.kmpdashboard`.
+- The Android application namespace and Kotlin package are `com.hannes.familytree`.
 
 ## Implementation
 

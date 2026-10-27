@@ -1,4 +1,4 @@
-package com.example.kmpdashboard.ui.screens
+package com.hannes.familytree.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button

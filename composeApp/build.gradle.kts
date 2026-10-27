@@ -55,11 +55,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.kmpdashboard"
+    namespace = "com.hannes.familytree"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.kmpdashboard"
+        applicationId = "com.hannes.familytree"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

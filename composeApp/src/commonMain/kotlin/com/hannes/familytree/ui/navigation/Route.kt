@@ -1,4 +1,4 @@
-package com.example.kmpdashboard.ui.navigation
+package com.hannes.familytree.ui.navigation
 
 sealed class Route {
     data object Login : Route()

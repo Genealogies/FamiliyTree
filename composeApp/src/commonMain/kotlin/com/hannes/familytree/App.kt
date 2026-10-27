@@ -1,10 +1,10 @@
-package com.example.kmpdashboard
+package com.hannes.familytree
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
-import com.example.kmpdashboard.ui.navigation.AppRouter
-import com.example.kmpdashboard.ui.navigation.Route
-import com.example.kmpdashboard.ui.screens.LoginScreen
+import com.hannes.familytree.ui.navigation.AppRouter
+import com.hannes.familytree.ui.navigation.Route
+import com.hannes.familytree.ui.screens.LoginScreen
 
 @Composable
 fun App() {

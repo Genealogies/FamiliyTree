@@ -1,9 +1,9 @@
-package com.example.kmpdashboard.ui.navigation
+package com.hannes.familytree.ui.navigation
 
 import androidx.compose.runtime.Composable
-import com.example.kmpdashboard.ui.screens.DashboardDetailScreen
-import com.example.kmpdashboard.ui.screens.DashboardScreen
-import com.example.kmpdashboard.ui.screens.SettingsScreen
+import com.hannes.familytree.ui.screens.DashboardDetailScreen
+import com.hannes.familytree.ui.screens.DashboardScreen
+import com.hannes.familytree.ui.screens.SettingsScreen
 
 @Composable
 fun AppRouter(

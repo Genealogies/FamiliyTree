@@ -1,6 +1,6 @@
 name: iosApp
 options:
-  bundleIdPrefix: com.example.kmpdashboard
+  bundleIdPrefix: com.hannes.familytree
   deploymentTarget:
     iOS: "15.0"
 settings:
@@ -21,7 +21,7 @@ targets:
           - "**/*.md"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.kmpdashboard
+        PRODUCT_BUNDLE_IDENTIFIER: com.hannes.familytree
         INFOPLIST_FILE: iosApp/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES

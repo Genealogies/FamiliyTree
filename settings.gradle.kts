@@ -1,4 +1,4 @@
-rootProject.name = "KmpDashboardApp"
+rootProject.name = "FamilyTree"
 
 pluginManagement {
     repositories {
