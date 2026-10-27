@@ -1,8 +1,11 @@
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
+
 plugins {
     kotlin("multiplatform") version "2.0.21"
     id("com.android.application") version "8.6.1"
     id("org.jetbrains.compose") version "1.7.1"
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+    id("app.cash.paparazzi") version "1.3.5"
 }
 
 kotlin {
@@ -33,9 +36,21 @@ kotlin {
             }
         }
 
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+
         val androidMain by getting {
             dependencies {
                 implementation("androidx.activity:activity-compose:1.9.2")
+            }
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation("junit:junit:4.13.2")
             }
         }
 
@@ -51,6 +66,12 @@ kotlin {
         val iosSimulatorArm64Main by getting {
             dependsOn(iosMain)
         }
+    }
+}
+
+tasks.withType<KotlinNativeSimulatorTest>().configureEach {
+    providers.gradleProperty("iosSimulatorDevice").orNull?.let {
+        device = it
     }
 }
 

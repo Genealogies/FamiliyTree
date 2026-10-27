@@ -7,10 +7,10 @@ import com.hannes.familytree.ui.navigation.Route
 import com.hannes.familytree.ui.screens.LoginScreen
 
 @Composable
-fun App() {
+fun App(initialRoute: Route = Route.Login) {
     MaterialTheme {
-        var isLoggedIn by remember { mutableStateOf(false) }
-        var currentRoute by remember { mutableStateOf<Route>(Route.Login) }
+        var isLoggedIn by remember { mutableStateOf(initialRoute != Route.Login) }
+        var currentRoute by remember { mutableStateOf(initialRoute) }
 
         if (!isLoggedIn) {
             LoginScreen(
