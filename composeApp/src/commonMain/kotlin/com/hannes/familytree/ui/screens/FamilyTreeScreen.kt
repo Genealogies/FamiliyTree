@@ -26,7 +26,7 @@ fun FamilyTreeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Family Tree") },
+                title = { Text("Family Tree TEST") },
                 actions = {
                     TextButton(onClick = onBack) { Text("Back") }
                 }
