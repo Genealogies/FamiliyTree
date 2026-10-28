@@ -22,7 +22,7 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dashboard") },
+                title = { Text("Dashboard-Test") },
                 actions = {
                     TextButton(onClick = onOpenFamilyTree) { Text("Family Tree") }
                     TextButton(onClick = onOpenSettings) { Text("Settings") }
