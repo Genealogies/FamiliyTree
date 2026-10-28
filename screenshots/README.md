@@ -10,6 +10,20 @@ visual difference fails the platform's job. Review the uploaded artifacts for
 the expected image, actual image, and visual diff before accepting an intentional
 UI change.
 
+## Reviewing diffs on the pull request itself
+
+On every PR, whether or not the screenshot check passes, each platform's job
+runs `scripts/report_screenshot_diffs.py`. If a screen differs, it uploads the
+expected/actual/diff images via GitHub's own user-attachments API (the same
+mechanism the web UI uses for drag-and-drop image uploads in issues/PRs, so no
+external image host or extra secrets are needed) and posts one PR comment per
+platform with a side-by-side table. Re-running the job updates that same
+comment in place instead of adding duplicates, and the comment is removed once
+the PR's screens match the baselines again. Because it uses the default
+`GITHUB_TOKEN`, this comment cannot be posted for pull requests from forks
+(that token is read-only there); the dedicated verification step still fails
+the job in that case, so the artifacts remain the way to review the diff.
+
 ## Android
 
 Paparazzi renders the real Compose `App` on the JVM using a fixed Pixel 5 device

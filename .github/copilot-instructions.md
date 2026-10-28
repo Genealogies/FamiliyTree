@@ -28,3 +28,4 @@
 - `.github/workflows/ci.yml` builds and tests both platforms on every pull request and supports manual dispatch. Android uses Ubuntu and Java 17; iOS uses an Apple Silicon macOS runner and Xcode 26.0.1 to build the unsigned simulator app and run Kotlin tests. The Xcode project has no native XCTest target.
 - CI uploads test reports even on failures and the debug APK after a successful Android build.
 - UI screenshot checks run on both platforms. See `screenshots/README.md` for baseline locations, verification, and intentional baseline updates; never automatically accept visual changes in CI.
+- On a pull request, `scripts/report_screenshot_diffs.py` posts/updates one PR comment per platform with expected/actual/diff images when a screen differs, using GitHub's user-attachments API (no external server or secrets). It never fails the job itself; the dedicated verification step already does that.
