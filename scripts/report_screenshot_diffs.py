@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload failing screenshot diffs and post/update a pull request comment.
+"""Upload failing iOS screenshot diffs and post/update a pull request comment.
 
 Runs after the Android (Paparazzi) or iOS screenshot verification step,
 regardless of whether it passed. If no screen differs it removes any stale
@@ -28,36 +28,6 @@ from pathlib import Path
 
 def marker(platform: str) -> str:
     return f"<!-- screenshot-diff:{platform} -->"
-
-
-def collect_android(build_dir: Path, snapshots_dir: Path):
-    """Pair up Paparazzi's failure output with the committed baseline.
-
-    Paparazzi writes ``<fqcn>.png`` (actual) and ``delta-<fqcn>.png`` (diff)
-    to ``build/paparazzi/failures/`` when a snapshot differs; the baseline
-    lives at ``snapshots/images/<fqcn>.png``.
-    """
-    failures_dir = build_dir / "paparazzi" / "failures"
-    if not failures_dir.is_dir():
-        return []
-    entries = []
-    for diff in sorted(failures_dir.glob("delta-*.png")):
-        fqcn = diff.name[len("delta-") : -len(".png")]
-        actual = failures_dir / f"{fqcn}.png"
-        if not actual.is_file():
-            continue
-        expected = snapshots_dir / "images" / f"{fqcn}.png"
-        name = fqcn.rsplit("_", 1)[-1]
-        entries.append(
-            {
-                "name": name,
-                "detail": "differs from the committed baseline",
-                "expected": expected if expected.is_file() else None,
-                "actual": actual,
-                "diff": diff,
-            }
-        )
-    return entries
 
 
 def collect_ios(output_dir: Path):
@@ -159,18 +129,13 @@ def delete_stale_comment(repo: str, pr: int, platform: str):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--platform", required=True, choices=["android", "ios"])
+    parser.add_argument("--platform", required=True, choices=["ios"])
     parser.add_argument("--repo", required=True)
     parser.add_argument("--pr", type=int, required=True)
-    parser.add_argument("--android-build-dir", type=Path)
-    parser.add_argument("--android-snapshots-dir", type=Path)
     parser.add_argument("--ios-output-dir", type=Path)
     args = parser.parse_args()
 
-    if args.platform == "android":
-        entries = collect_android(args.android_build_dir, args.android_snapshots_dir)
-    else:
-        entries = collect_ios(args.ios_output_dir)
+    entries = collect_ios(args.ios_output_dir)
 
     try:
         if not entries:

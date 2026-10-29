@@ -15,10 +15,14 @@ concurrency:
 jobs:
   android:
     name: Android build and tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install screenshot reporter dependencies
+        run: sudo apt-get update && sudo apt-get install -y zsh jq
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,21 +34,14 @@ jobs:
       - name: Build debug APK and run unit tests
         run: ./gradlew :composeApp:assembleDebug :composeApp:verifyPaparazziDebug --stacktrace
       - name: Report screenshot diffs on PR
-        # Best-effort: posts/updates a PR comment with the expected/actual/diff
-        # images via GitHub's own attachment hosting (no external server or
-        # secrets needed). Runs even when the step above failed so the diff
-        # that caused the failure is visible on the PR; never fails the job
-        # itself, since GITHUB_TOKEN is read-only for fork PRs.
+        # Runs even if screenshot verification failed so Paparazzi's generated
+        # expected/actual/diff images are still visible on the PR.
         if: always() && github.event_name == 'pull_request'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLASSIC_TOKEN: ${{ secrets.CLASSIC_TOKEN }}
         run: |
-          python3 scripts/report_screenshot_diffs.py \
-            --platform android \
-            --repo "${{ github.repository }}" \
-            --pr "${{ github.event.pull_request.number }}" \
-            --android-build-dir composeApp/build \
-            --android-snapshots-dir composeApp/src/test/snapshots
+          zsh screenShotScript/screenShotCompare.sh \
+            --paparazzi composeApp/build composeApp/src/test/snapshots false
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
