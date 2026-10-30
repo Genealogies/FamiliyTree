@@ -38,7 +38,13 @@ def simctl(*args, **kwargs):
 
 
 def pick_device_type(supported):
-    """Pick PREFERRED_DEVICE_NAME if available, else the newest plain iPhone."""
+    """Pick PREFERRED_DEVICE_NAME if available, else the newest plain iPhone.
+
+    Returns None if the runtime doesn't support any plain iPhone at all (e.g.
+    a trimmed runtime that only ships exotic device types like "iPhone Duo"),
+    so callers can try a different runtime instead of silently picking an
+    unrelated device.
+    """
     exact = next((d for d in supported if d["name"] == PREFERRED_DEVICE_NAME), None)
     if exact:
         return exact
@@ -51,18 +57,19 @@ def pick_device_type(supported):
         # Highest model number, preferring the "Pro" variant at that number.
         candidates.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
         return candidates[0][2]
-    # No recognizable plain iPhone at all; fall back to whatever is last,
-    # though this may not even be an iPhone.
-    return supported[-1]
+    return None
 
 
 def resolve_runtime_and_device_type():
-    """Pick the newest available iOS runtime and a matching device type.
+    """Pick an available iOS runtime and a matching plain-iPhone device type.
 
-    Xcode versions ship different runtimes/device types over time, so instead of
-    pinning identifiers we resolve them at run time: use the highest-versioned
-    available iOS runtime, then prefer PREFERRED_DEVICE_NAME among the device
-    types it supports, falling back to the newest plain iPhone it does support.
+    Xcode versions ship different runtimes/device types over time, and a
+    runtime isn't guaranteed to support a plain iPhone at all (some trimmed
+    runtimes only ship exotic device types, e.g. "iPhone Duo"). So instead of
+    just using the newest runtime, try runtimes from newest to oldest and use
+    the first one that supports PREFERRED_DEVICE_NAME or another plain
+    iPhone, only falling back to the newest runtime's own device catalog
+    (whatever that is) if no runtime has a plain iPhone at all.
     """
     runtimes = json.loads(simctl("list", "runtimes", "--json"))["runtimes"]
     ios_runtimes = [
@@ -70,17 +77,22 @@ def resolve_runtime_and_device_type():
         for runtime in runtimes
         if runtime.get("isAvailable")
         and runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")
+        and runtime.get("supportedDeviceTypes")
     ]
     if not ios_runtimes:
         sys.exit("No available iOS simulator runtime found")
-    runtime = max(
-        ios_runtimes,
+    ios_runtimes.sort(
         key=lambda runtime: tuple(int(part) for part in runtime["version"].split(".")),
+        reverse=True,
     )
-    supported = runtime.get("supportedDeviceTypes", [])
-    if not supported:
-        sys.exit(f"No device types supported by runtime {runtime['identifier']}")
-    device_type = pick_device_type(supported)
+    for runtime in ios_runtimes:
+        device_type = pick_device_type(runtime["supportedDeviceTypes"])
+        if device_type is not None:
+            return runtime["identifier"], device_type["identifier"]
+    # No runtime supports a plain iPhone; fall back to the newest runtime's
+    # last device type, though this may not even be an iPhone.
+    runtime = ios_runtimes[0]
+    device_type = runtime["supportedDeviceTypes"][-1]
     return runtime["identifier"], device_type["identifier"]
 
 
