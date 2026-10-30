@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -16,20 +17,83 @@ ROOT = Path(__file__).resolve().parents[1]
 BASELINES = ROOT / "screenshots/ios"
 OUTPUT = ROOT / "build/screenshots/ios"
 SCREENS = ("login", "dashboard", "settings", "detail")
-RUNTIME = "com.apple.CoreSimulator.SimRuntime.iOS-26-0"
-DEVICE_TYPE = "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"
+PREFERRED_DEVICE_NAME = "iPhone 17 Pro"
 BUNDLE_ID = "com.hannes.familytree"
 # The status bar (clock/Wi-Fi/battery) is simulator chrome, not app UI. The
 # simctl status_bar override that pins its content is not reliably honored on
 # every host, so ignore this band instead of depending on it. Verified clear
 # of the topmost app content (screen titles start around y=265 on this device).
 IGNORED_TOP_PIXELS = 200
+# A plain "iPhone <N>[ Pro]" name. Excludes multi-screen/foldable variants
+# (e.g. "iPhone Duo") and non-numbered ones (e.g. "iPhone Air", "iPhone 17e"),
+# which aren't safe fallbacks: they may have a different aspect ratio, or
+# legitimately expose more than one display themselves.
+IPHONE_NAME_RE = re.compile(r"^iPhone (\d+)( Pro)?( Max)?$")
 
 
 def simctl(*args, **kwargs):
     return subprocess.check_output(
         ["xcrun", "simctl", *args], text=True, **kwargs
     ).strip()
+
+
+def pick_device_type(supported):
+    """Pick PREFERRED_DEVICE_NAME if available, else the newest plain iPhone.
+
+    Returns None if the runtime doesn't support any plain iPhone at all (e.g.
+    a trimmed runtime that only ships exotic device types like "iPhone Duo"),
+    so callers can try a different runtime instead of silently picking an
+    unrelated device.
+    """
+    exact = next((d for d in supported if d["name"] == PREFERRED_DEVICE_NAME), None)
+    if exact:
+        return exact
+    candidates = []
+    for device in supported:
+        match = IPHONE_NAME_RE.match(device["name"])
+        if match:
+            candidates.append((int(match.group(1)), bool(match.group(2)), device))
+    if candidates:
+        # Highest model number, preferring the "Pro" variant at that number.
+        candidates.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+        return candidates[0][2]
+    return None
+
+
+def resolve_runtime_and_device_type():
+    """Pick an available iOS runtime and a matching plain-iPhone device type.
+
+    Xcode versions ship different runtimes/device types over time, and a
+    runtime isn't guaranteed to support a plain iPhone at all (some trimmed
+    runtimes only ship exotic device types, e.g. "iPhone Duo"). So instead of
+    just using the newest runtime, try runtimes from newest to oldest and use
+    the first one that supports PREFERRED_DEVICE_NAME or another plain
+    iPhone, only falling back to the newest runtime's own device catalog
+    (whatever that is) if no runtime has a plain iPhone at all.
+    """
+    runtimes = json.loads(simctl("list", "runtimes", "--json"))["runtimes"]
+    ios_runtimes = [
+        runtime
+        for runtime in runtimes
+        if runtime.get("isAvailable")
+        and runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")
+        and runtime.get("supportedDeviceTypes")
+    ]
+    if not ios_runtimes:
+        sys.exit("No available iOS simulator runtime found")
+    ios_runtimes.sort(
+        key=lambda runtime: tuple(int(part) for part in runtime["version"].split(".")),
+        reverse=True,
+    )
+    for runtime in ios_runtimes:
+        device_type = pick_device_type(runtime["supportedDeviceTypes"])
+        if device_type is not None:
+            return runtime["identifier"], device_type["identifier"]
+    # No runtime supports a plain iPhone; fall back to the newest runtime's
+    # last device type, though this may not even be an iPhone.
+    runtime = ios_runtimes[0]
+    device_type = runtime["supportedDeviceTypes"][-1]
+    return runtime["identifier"], device_type["identifier"]
 
 
 def compare(expected_path, actual_path, diff_path):
@@ -75,7 +139,11 @@ def capture(device, screen, destination):
     # Require two identical frames so a launch/Compose animation is not recorded.
     previous = None
     for _ in range(20):
-        simctl("io", device, "screenshot", str(destination))
+        # Pin the display explicitly: some runners expose more than one host
+        # display ("Cannot choose between 2 displays"). "primary" is simctl's
+        # device-name alias for the main display and works whether the host
+        # has one display or several external ones attached.
+        simctl("io", device, "screenshot", "--display=primary", str(destination))
         with Image.open(destination) as image:
             current = image.convert("RGB").tobytes()
         if current == previous:
@@ -95,11 +163,14 @@ def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     if args.record:
         BASELINES.mkdir(parents=True, exist_ok=True)
-    device = simctl("create", "Screenshot tests", DEVICE_TYPE, RUNTIME)
+    runtime, device_type = resolve_runtime_and_device_type()
+    print(f"Resolved runtime={runtime} device_type={device_type}")
+    device = simctl("create", "Screenshot tests", device_type, runtime)
     failures = []
     try:
         simctl("boot", device)
         simctl("bootstatus", device, "-b")
+        print(simctl("io", device, "enumerate"))
         simctl("ui", device, "appearance", "light")
         simctl(
             "status_bar", device, "override", "--time", "9:41",
