@@ -23,4 +23,9 @@
 - For an Android debug build, run `./gradlew :composeApp:assembleDebug`.
 - For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and build the `iosApp` scheme; its build phase runs `:composeApp:embedAndSignAppleFrameworkForXcode`.
 - For broader multiplatform verification, run `./gradlew build` on a machine with the required platform toolchains (including Xcode for Apple targets).
-- Run relevant tests when present. There are currently no test source files in the repository; do not claim tests passed if none were run.
+- Shared tests live in `composeApp/src/commonTest`. Run Android unit tests with `./gradlew :composeApp:testDebugUnitTest`.
+- On macOS, run shared tests on an installed iOS simulator with `./gradlew :composeApp:iosX64Test -PiosSimulatorDevice="<simulator UDID>"` for Intel, or `:composeApp:iosSimulatorArm64Test` for Apple Silicon. Find UDIDs with `xcrun simctl list devices available`.
+- `.github/workflows/ci.yml` builds and tests both platforms on every pull request and supports manual dispatch. Android uses Ubuntu and Java 17; iOS uses an Apple Silicon macOS runner and Xcode 26.0.1 to build the unsigned simulator app and run Kotlin tests. The Xcode project has no native XCTest target.
+- CI uploads test reports even on failures and the debug APK after a successful Android build.
+- UI screenshot checks run on both platforms. See `screenshots/README.md` for baseline locations, verification, and intentional baseline updates; never automatically accept visual changes in CI.
+- On a pull request, Android Paparazzi differences are reported by `screenShotScript/screenShotCompare.sh` using the `CLASSIC_TOKEN` repository secret; iOS differences are reported by `scripts/report_screenshot_diffs.py`. Both use GitHub's user-attachments API to include expected/actual/diff images in PR comments.

@@ -1,0 +1,6 @@
+[submodule "screenShotScript"]
+	path = screenShotScript
+	url = git@github.com:hannesa2/screenShotScript.git
+[submodule "git-diff-image"]
+	path = git-diff-image
+	url = git@github.com:hannesa2/git-diff-image.git
