@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -23,6 +24,11 @@ BUNDLE_ID = "com.hannes.familytree"
 # every host, so ignore this band instead of depending on it. Verified clear
 # of the topmost app content (screen titles start around y=265 on this device).
 IGNORED_TOP_PIXELS = 200
+# A plain "iPhone <N>[ Pro]" name. Excludes multi-screen/foldable variants
+# (e.g. "iPhone Duo") and non-numbered ones (e.g. "iPhone Air", "iPhone 17e"),
+# which aren't safe fallbacks: they may have a different aspect ratio, or
+# legitimately expose more than one display themselves.
+IPHONE_NAME_RE = re.compile(r"^iPhone (\d+)( Pro)?( Max)?$")
 
 
 def simctl(*args, **kwargs):
@@ -31,13 +37,32 @@ def simctl(*args, **kwargs):
     ).strip()
 
 
+def pick_device_type(supported):
+    """Pick PREFERRED_DEVICE_NAME if available, else the newest plain iPhone."""
+    exact = next((d for d in supported if d["name"] == PREFERRED_DEVICE_NAME), None)
+    if exact:
+        return exact
+    candidates = []
+    for device in supported:
+        match = IPHONE_NAME_RE.match(device["name"])
+        if match:
+            candidates.append((int(match.group(1)), bool(match.group(2)), device))
+    if candidates:
+        # Highest model number, preferring the "Pro" variant at that number.
+        candidates.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+        return candidates[0][2]
+    # No recognizable plain iPhone at all; fall back to whatever is last,
+    # though this may not even be an iPhone.
+    return supported[-1]
+
+
 def resolve_runtime_and_device_type():
     """Pick the newest available iOS runtime and a matching device type.
 
     Xcode versions ship different runtimes/device types over time, so instead of
     pinning identifiers we resolve them at run time: use the highest-versioned
     available iOS runtime, then prefer PREFERRED_DEVICE_NAME among the device
-    types it supports, falling back to whatever it does support.
+    types it supports, falling back to the newest plain iPhone it does support.
     """
     runtimes = json.loads(simctl("list", "runtimes", "--json"))["runtimes"]
     ios_runtimes = [
@@ -55,10 +80,7 @@ def resolve_runtime_and_device_type():
     supported = runtime.get("supportedDeviceTypes", [])
     if not supported:
         sys.exit(f"No device types supported by runtime {runtime['identifier']}")
-    device_type = next(
-        (device for device in supported if device["name"] == PREFERRED_DEVICE_NAME),
-        supported[-1],
-    )
+    device_type = pick_device_type(supported)
     return runtime["identifier"], device_type["identifier"]
 
 
@@ -130,11 +152,13 @@ def main():
     if args.record:
         BASELINES.mkdir(parents=True, exist_ok=True)
     runtime, device_type = resolve_runtime_and_device_type()
+    print(f"Resolved runtime={runtime} device_type={device_type}")
     device = simctl("create", "Screenshot tests", device_type, runtime)
     failures = []
     try:
         simctl("boot", device)
         simctl("bootstatus", device, "-b")
+        print(simctl("io", device, "enumerate"))
         simctl("ui", device, "appearance", "light")
         simctl(
             "status_bar", device, "override", "--time", "9:41",
