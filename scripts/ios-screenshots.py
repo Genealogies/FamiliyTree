@@ -106,9 +106,10 @@ def capture(device, screen, destination):
     previous = None
     for _ in range(20):
         # Pin the display explicitly: some runners expose more than one host
-        # display, and simctl refuses to guess which one to capture from
-        # ("Cannot choose between 2 displays") without this.
-        simctl("io", device, "screenshot", "--display=internal", str(destination))
+        # display ("Cannot choose between 2 displays"). "primary" is simctl's
+        # device-name alias for the main display and works whether the host
+        # has one display or several external ones attached.
+        simctl("io", device, "screenshot", "--display=primary", str(destination))
         with Image.open(destination) as image:
             current = image.convert("RGB").tobytes()
         if current == previous:
