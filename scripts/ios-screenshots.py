@@ -105,7 +105,10 @@ def capture(device, screen, destination):
     # Require two identical frames so a launch/Compose animation is not recorded.
     previous = None
     for _ in range(20):
-        simctl("io", device, "screenshot", str(destination))
+        # Pin the display explicitly: some runners expose more than one host
+        # display, and simctl refuses to guess which one to capture from
+        # ("Cannot choose between 2 displays") without this.
+        simctl("io", device, "screenshot", "--display=internal", str(destination))
         with Image.open(destination) as image:
             current = image.convert("RGB").tobytes()
         if current == previous:
