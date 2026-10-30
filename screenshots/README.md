@@ -42,11 +42,15 @@ reports.
 
 ## iOS
 
-The capture script creates and deletes its own **iPhone 17 Pro / iOS 26.0**
-simulator, forces light mode, English (US), standard text size, and a fixed
-status bar. CI builds with **Xcode 26.0.1** on Apple Silicon macOS. Use the same toolchain
-and runtime when updating references; renderer or OS updates require reviewing
-and regenerating baselines. References are in `screenshots/ios`.
+The capture script creates and deletes its own simulator, preferring an
+**iPhone 17 Pro** device on the newest available iOS runtime (falling back to
+whatever the installed Xcode ships if that device isn't available), forces
+light mode, English (US), standard text size, and a fixed status bar. CI
+currently builds with **Xcode 27.0** on Apple Silicon macOS. Because the
+runtime/device are resolved dynamically, a CI Xcode upgrade keeps working
+without code changes, but renderer or OS updates can still shift pixels —
+review and regenerate baselines after upgrading the CI toolchain. References
+are in `screenshots/ios`.
 
 The Debug build accepts `SCREENSHOT_ROUTE` only for screenshot capture; Release
 builds always start at Login. Capture waits for first-boot notifications to
