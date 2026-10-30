@@ -63,7 +63,7 @@ jobs:
   ios:
     name: iOS build and tests
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
