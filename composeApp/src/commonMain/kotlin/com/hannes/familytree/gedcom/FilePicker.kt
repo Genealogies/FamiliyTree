@@ -7,4 +7,4 @@ interface FilePickerLauncher {
 }
 
 @Composable
-expect fun rememberFilePicker(onFilePicked: (String?) -> Unit): FilePickerLauncher
+expect fun rememberFilePicker(onFilePicked: (Result<String>?) -> Unit): FilePickerLauncher

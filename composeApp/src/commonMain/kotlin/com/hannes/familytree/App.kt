@@ -13,20 +13,34 @@ fun App(initialRoute: Route = Route.Login) {
         var isLoggedIn by remember { mutableStateOf(initialRoute != Route.Login) }
         var importedGraph by remember { mutableStateOf<FamilyGraph?>(null) }
         var currentRoute by remember { mutableStateOf(initialRoute) }
+        var currentListing by remember {
+            mutableStateOf(
+                when (initialRoute) {
+                    is Route.Listing -> initialRoute
+                    is Route.Detail -> initialRoute.listing
+                    else -> Route.Members
+                }
+            )
+        }
 
         if (!isLoggedIn) {
             LoginScreen(
                 onLogin = { username, password ->
                     if (username.isNotBlank() && password.isNotBlank()) {
                         isLoggedIn = true
-                        currentRoute = Route.Dashboard
+                        currentListing = Route.Members
+                        currentRoute = Route.Members
                     }
                 }
             )
         } else {
             AppRouter(
                 route = currentRoute,
-                onNavigate = { currentRoute = it },
+                onNavigate = {
+                    if (it is Route.Listing) currentListing = it
+                    currentRoute = it
+                },
+                returnToListing = currentListing,
                 importedGraph = importedGraph,
                 onGraphImported = { importedGraph = it },
                 onLogout = {

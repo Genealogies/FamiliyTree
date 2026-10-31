@@ -8,10 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.hannes.familytree.ui.navigation.Route
 
 @Composable
-fun DashboardDetailScreen(
+fun DetailScreen(
     itemId: Int,
+    listing: Route.Listing,
     onBack: () -> Unit
 ) {
     Box(
@@ -22,10 +24,10 @@ fun DashboardDetailScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Dashboard Detail", style = MaterialTheme.typography.headlineSmall)
+            Text("${listing.itemLabel} Detail", style = MaterialTheme.typography.headlineSmall)
             Text("You selected item #$itemId")
             Button(onClick = onBack) {
-                Text("Back to Dashboard")
+                Text("Back to ${listing.title}")
             }
         }
     }

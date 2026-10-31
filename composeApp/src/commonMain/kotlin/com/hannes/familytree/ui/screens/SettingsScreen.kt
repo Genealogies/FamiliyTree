@@ -2,11 +2,7 @@ package com.hannes.familytree.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import com.hannes.familytree.gedcom.GedcomImporter
-import com.hannes.familytree.gedcom.rememberFilePicker
 import com.hannes.familytree.ui.tree.FamilyGraph
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -19,23 +15,6 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onGraphImported: (FamilyGraph) -> Unit = {}
 ) {
-    val density = LocalDensity.current
-    var importError by remember { mutableStateOf<String?>(null) }
-    val filePicker = rememberFilePicker { content ->
-        if (content != null) {
-            val graph = try {
-                GedcomImporter.import(content, density)
-            } catch (e: Exception) {
-                null
-            }
-            if (graph != null) {
-                importError = null
-                onGraphImported(graph)
-            } else {
-                importError = "Could not import GEDCOM file"
-            }
-        }
-    }
     var notificationsEnabled by remember { mutableStateOf(true) }
 
     Box(
@@ -59,10 +38,7 @@ fun SettingsScreen(
                 )
             }
 
-            Button(onClick = { filePicker.launch() }) {
-                Text("Import GEDCOM")
-            }
-            importError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            GedcomImportButton(onGraphImported = onGraphImported)
 
             Button(onClick = onBack) {
                 Text("Back")
