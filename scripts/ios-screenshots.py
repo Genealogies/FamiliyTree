@@ -16,7 +16,7 @@ from PIL import Image, ImageChops
 ROOT = Path(__file__).resolve().parents[1]
 BASELINES = ROOT / "screenshots/ios"
 OUTPUT = ROOT / "build/screenshots/ios"
-SCREENS = ("login", "dashboard", "settings", "detail")
+SCREENS = ("login", "dashboard", "settings", "detail", "familytree")
 PREFERRED_DEVICE_NAME = "iPhone 17 Pro"
 BUNDLE_ID = "com.hannes.familytree"
 # The status bar (clock/Wi-Fi/battery) is simulator chrome, not app UI. The
@@ -127,7 +127,33 @@ def compare(expected_path, actual_path, diff_path):
     return None
 
 
-def capture(device, screen, destination):
+def resolve_display_arg(device):
+    """Return a simctl `--display` value, or None to let simctl auto-resolve.
+
+    Some hosts expose more than one display and simctl then refuses to guess
+    ("Cannot choose between N displays"), requiring an explicit identifier.
+    The display's port/device name ("primary", "PurpleMain", ...) is not
+    stable across Xcode/simulator versions, so first try without --display at
+    all (works whenever simctl can resolve a single main display on its own)
+    and only fall back to the connected screen's numeric Screen ID - parsed
+    from `enumerate`'s "Connected Screens" section - when that is rejected.
+    """
+    probe = OUTPUT / f".display-probe-{device}.png"
+    try:
+        simctl("io", device, "screenshot", str(probe))
+        return None
+    except subprocess.CalledProcessError:
+        pass
+    finally:
+        probe.unlink(missing_ok=True)
+    enumeration = simctl("io", device, "enumerate")
+    match = re.search(r"Connected Screens:.*?Screen ID: (\d+)", enumeration, re.DOTALL)
+    if not match:
+        raise RuntimeError("Could not resolve a unique display for screenshot capture")
+    return match.group(1)
+
+
+def capture(device, screen, destination, display_arg):
     env = dict(os.environ, SIMCTL_CHILD_SCREENSHOT_ROUTE=screen)
     simctl(
         "launch", "--terminate-running-process", device, BUNDLE_ID,
@@ -136,14 +162,11 @@ def capture(device, screen, destination):
         env=env,
     )
     time.sleep(3)
+    display_args = [f"--display={display_arg}"] if display_arg else []
     # Require two identical frames so a launch/Compose animation is not recorded.
     previous = None
     for _ in range(20):
-        # Pin the display explicitly: some runners expose more than one host
-        # display ("Cannot choose between 2 displays"). "primary" is simctl's
-        # device-name alias for the main display and works whether the host
-        # has one display or several external ones attached.
-        simctl("io", device, "screenshot", "--display=primary", str(destination))
+        simctl("io", device, "screenshot", *display_args, str(destination))
         with Image.open(destination) as image:
             current = image.convert("RGB").tobytes()
         if current == previous:
@@ -181,12 +204,14 @@ def main():
         # A fresh iOS runtime can display first-boot system notification banners.
         simctl("launch", device, BUNDLE_ID)
         time.sleep(30)
+        display_arg = resolve_display_arg(device)
+        print(f"Resolved display_arg={display_arg!r}")
         for screen in SCREENS:
             actual = OUTPUT / f"{screen}.png"
             baseline = BASELINES / f"{screen}.png"
             diff = OUTPUT / f"{screen}-diff.png"
             diff.unlink(missing_ok=True)
-            capture(device, screen, actual)
+            capture(device, screen, actual, display_arg)
             if args.record:
                 baseline.write_bytes(actual.read_bytes())
                 print(f"Recorded {screen}")
