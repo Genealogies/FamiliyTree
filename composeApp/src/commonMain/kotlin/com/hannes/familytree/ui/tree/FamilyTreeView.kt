@@ -2,17 +2,20 @@ package com.hannes.familytree.ui.tree
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,14 +71,43 @@ fun LazyFamilyTree(
     nodeWidth: Dp = 120.dp,
     nodeHeight: Dp = 70.dp,
     state: FamilyTreeState = rememberFamilyTreeState(),
+    focusedPersonId: String? = null,
+    onPersonClick: (Person) -> Unit = {},
     nodeContent: @Composable (Person) -> Unit = { DefaultPersonCard(it) }
 ) {
     val density = LocalDensity.current
     val nodeWidthPx = with(density) { nodeWidth.toPx() }
     val nodeHeightPx = with(density) { nodeHeight.toPx() }
+    val graphWidthPx = maxOf(
+        graph.width,
+        graph.persons.values.maxOfOrNull { it.x + nodeWidthPx } ?: 0f
+    )
+    val graphHeightPx = maxOf(
+        graph.height,
+        graph.persons.values.maxOfOrNull { it.y + nodeHeightPx } ?: 0f
+    )
+    val graphWidth = with(density) { graphWidthPx.toDp() }.coerceAtLeast(nodeWidth)
+    val graphHeight = with(density) { graphHeightPx.toDp() }.coerceAtLeast(nodeHeight)
+    val initialPersonId = graph.persons.values
+        .minWithOrNull(compareBy<Person> { it.y }.thenBy { it.x })
+        ?.id
+    var internallyFocusedPersonId by remember(graph) {
+        mutableStateOf(focusedPersonId ?: initialPersonId)
+    }
+    val activeFocusedPersonId = focusedPersonId ?: internallyFocusedPersonId
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val viewportSize = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
+        val focusedPerson = activeFocusedPersonId?.let(graph.persons::get)
+
+        LaunchedEffect(activeFocusedPersonId, focusedPerson?.x, focusedPerson?.y, viewportSize, state) {
+            if (focusedPerson != null) {
+                state.offset = Offset(
+                    viewportSize.width / 2f - (focusedPerson.x + nodeWidthPx / 2f) * state.scale,
+                    viewportSize.height / 2f - (focusedPerson.y + nodeHeightPx / 2f) * state.scale
+                )
+            }
+        }
 
         // Visible area in graph coordinates: (viewport boundary - offset) / scale
         val visibleRect = Rect(
@@ -96,7 +128,8 @@ fun LazyFamilyTree(
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .align(Alignment.TopStart)
+                    .requiredSize(graphWidth, graphHeight)
                     .graphicsLayer(
                         scaleX = state.scale,
                         scaleY = state.scale,
@@ -106,7 +139,7 @@ fun LazyFamilyTree(
                     )
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawUnionLines(graph, nodeWidthPx, nodeHeightPx)
+                    drawUnionLines(graph, visibleRect, nodeWidthPx, nodeHeightPx)
                 }
 
                 FamilyTreeSubcomposer(
@@ -114,6 +147,13 @@ fun LazyFamilyTree(
                     visibleRect = visibleRect,
                     nodeWidth = nodeWidth,
                     nodeHeight = nodeHeight,
+                    focusedPersonId = activeFocusedPersonId,
+                    onPersonClick = { person ->
+                        if (focusedPersonId == null) {
+                            internallyFocusedPersonId = person.id
+                        }
+                        onPersonClick(person)
+                    },
                     nodeContent = nodeContent
                 )
             }
@@ -127,107 +167,170 @@ private fun FamilyTreeSubcomposer(
     visibleRect: Rect,
     nodeWidth: Dp,
     nodeHeight: Dp,
+    focusedPersonId: String?,
+    onPersonClick: (Person) -> Unit,
     nodeContent: @Composable (Person) -> Unit
 ) {
     SubcomposeLayout(modifier = Modifier.fillMaxSize()) { constraints ->
-        // Identify persons within the viewport (with a small buffer/margin)
-        val buffer = 100f
+        val nodeWidthPx = nodeWidth.toPx()
+        val nodeHeightPx = nodeHeight.toPx()
+        val bufferedVisibleRect = visibleRect.inflate(100f)
         val visiblePersons = graph.persons.values.filter { person ->
-            val personRect = Rect(person.x, person.y, person.x + 400f, person.y + 200f) // approximate max size
-            visibleRect.inflate(buffer).overlaps(personRect)
+            bufferedVisibleRect.overlaps(
+                Rect(
+                    person.x,
+                    person.y,
+                    person.x + nodeWidthPx,
+                    person.y + nodeHeightPx
+                )
+            )
         }
-
         val nodePlaceables = visiblePersons.map { person ->
-            val placeable = subcompose(person.id) {
-                Box(modifier = Modifier.size(nodeWidth, nodeHeight)) {
+            val widthPx = nodeWidth.roundToPx()
+            val heightPx = nodeHeight.roundToPx()
+            val placeables = subcompose(person.id) {
+                Box(
+                    Modifier
+                        .size(nodeWidth, nodeHeight)
+                        .then(
+                            if (person.id == focusedPersonId) {
+                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary)
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .clickable { onPersonClick(person) }
+                ) {
                     nodeContent(person)
                 }
-            }.map { it.measure(Constraints()) }
-
-            person to placeable
+            }.map {
+                it.measure(
+                    Constraints(
+                        minWidth = widthPx,
+                        maxWidth = widthPx,
+                        minHeight = heightPx,
+                        maxHeight = heightPx
+                    )
+                )
+            }
+            person to placeables
         }
 
         layout(constraints.maxWidth, constraints.maxHeight) {
             nodePlaceables.forEach { (person, placeables) ->
                 placeables.forEach { placeable ->
-                    placeable.place(person.x.roundToInt(), person.y.roundToInt())
+                    placeable.placeRelative(person.x.roundToInt(), person.y.roundToInt())
                 }
             }
         }
     }
 }
 
-/** Draws union connector lines: spouse links, and parent/child "bus" lines. */
+/** Draws union connector lines: spouse junction, and parent/child branch lines. */
 private fun DrawScope.drawUnionLines(
     graph: FamilyGraph,
+    visibleRect: Rect,
     nodeWidthPx: Float,
     nodeHeightPx: Float
 ) {
     val centerX = nodeWidthPx / 2
     val centerY = nodeHeightPx / 2
+    val junctionRadius = 4.dp.toPx()
+    val singleParentDrop = 12.dp.toPx()
+    val childBranchGap = 20.dp.toPx()
 
     graph.unions.forEach { union ->
         val spouseIds = union.spouseIds
         if (spouseIds.isEmpty()) return@forEach
 
-        val s1 = graph.persons[spouseIds[0]] ?: return@forEach
-        val s2 = if (spouseIds.size > 1) graph.persons[spouseIds[1]] else null
-        val unionColor = if (union.isIncestuous) Color.Red else Color.Black
-        val unionStroke = if (union.isIncestuous) 4f else 3f
+        val spouses = spouseIds.mapNotNull(graph.persons::get)
+        if (spouses.isEmpty()) return@forEach
+        val firstSpouse = spouses.first()
+        val secondSpouse = spouses.getOrNull(1)
+        val unionColor = if (union.isIncestuous) Color.Red else Color.DarkGray
+        val unionStroke = if (union.isIncestuous) 4f else 2f
+        val children = union.childrenIds.mapNotNull(graph.persons::get)
+        val relatedPersons = spouses + children
+        val familyBounds = Rect(
+            left = relatedPersons.minOf { it.x },
+            top = relatedPersons.minOf { it.y },
+            right = relatedPersons.maxOf { it.x + nodeWidthPx },
+            bottom = relatedPersons.maxOf { it.y + nodeHeightPx }
+        )
+        if (!visibleRect.inflate(200f).overlaps(familyBounds)) return@forEach
 
-        // 1. Connector between spouses
-        if (s2 != null) {
+        val junction = if (secondSpouse != null) {
+            val leftSpouse = if (firstSpouse.x <= secondSpouse.x) firstSpouse else secondSpouse
+            val rightSpouse = if (leftSpouse === firstSpouse) secondSpouse else firstSpouse
+            val leftCenterY = leftSpouse.y + centerY
+            val rightCenterY = rightSpouse.y + centerY
+            val lineStart = Offset(leftSpouse.x + nodeWidthPx, leftCenterY)
+            val lineEnd = Offset(rightSpouse.x, rightCenterY)
             drawLine(
                 color = unionColor,
-                start = Offset(s1.x + centerX, s1.y + centerY),
-                end = Offset(s2.x + centerX, s2.y + centerY),
+                start = lineStart,
+                end = lineEnd,
+                strokeWidth = unionStroke
+            )
+
+            Offset(
+                x = (lineStart.x + lineEnd.x) / 2f,
+                y = (lineStart.y + lineEnd.y) / 2f
+            )
+        } else {
+            Offset(firstSpouse.x + centerX, firstSpouse.y + nodeHeightPx + singleParentDrop)
+        }
+
+        if (children.isEmpty()) {
+            if (secondSpouse != null) {
+                drawCircle(unionColor, junctionRadius, junction)
+            }
+            return@forEach
+        }
+
+        val childYTop = children.minOf { it.y } - childBranchGap
+        val parentBottom = firstSpouse.y + nodeHeightPx
+        if (secondSpouse == null) {
+            drawLine(
+                color = unionColor,
+                start = Offset(firstSpouse.x + centerX, parentBottom),
+                end = Offset(junction.x, junction.y - junctionRadius),
                 strokeWidth = unionStroke
             )
         }
+        drawCircle(unionColor, junctionRadius, junction)
 
-        // 2. Lines to children
-        val children = union.childrenIds.mapNotNull { graph.persons[it] }
-        if (children.isNotEmpty()) {
-            val childYTop = children.first().y - 30f // Height of the horizontal bus line
+        val trunkStartY = junction.y + junctionRadius
 
-            val minChildX = children.minOf { it.x }
-            val maxChildX = children.maxOf { it.x }
+        val firstChildX = children.minOf { it.x + centerX }
+        val lastChildX = children.maxOf { it.x + centerX }
+        drawLine(
+            color = unionColor,
+            start = Offset(junction.x, trunkStartY),
+            end = Offset(junction.x, childYTop),
+            strokeWidth = unionStroke
+        )
+        drawLine(
+            color = Color.Gray,
+            start = Offset(firstChildX, childYTop),
+            end = Offset(lastChildX, childYTop),
+            strokeWidth = 2f
+        )
 
-            // Ensure the bus reaches the union stem, even if parents are offset
-            val busLeft = minOf(minChildX, union.x)
-            val busRight = maxOf(maxChildX, union.x)
-
-            // Vertical stem from union to bus
+        children.forEach { child ->
+            val isAdopted = firstSpouse.adoptiveChildrenIds.contains(child.id) ||
+                secondSpouse?.adoptiveChildrenIds?.contains(child.id) == true
             drawLine(
-                color = unionColor,
-                start = Offset(union.x + centerX, union.y + centerY),
-                end = Offset(union.x + centerX, childYTop),
-                strokeWidth = unionStroke
+                color = Color.Gray,
+                start = Offset(child.x + centerX, childYTop),
+                end = Offset(child.x + centerX, child.y),
+                strokeWidth = 2f,
+                pathEffect = if (isAdopted) {
+                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                } else {
+                    null
+                }
             )
-
-            // Horizontal bus
-            drawLine(
-                color = unionColor,
-                start = Offset(busLeft + centerX, childYTop),
-                end = Offset(busRight + centerX, childYTop),
-                strokeWidth = 2f
-            )
-
-            // Vertical stems to children
-            children.forEach { child ->
-                val isAdopted = s1.adoptiveChildrenIds.contains(child.id) ||
-                        (s2?.adoptiveChildrenIds?.contains(child.id) == true)
-
-                val pathEffect = if (isAdopted) PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f) else null
-
-                drawLine(
-                    color = unionColor,
-                    start = Offset(child.x + centerX, childYTop),
-                    end = Offset(child.x + centerX, child.y),
-                    strokeWidth = 2f,
-                    pathEffect = pathEffect
-                )
-            }
         }
     }
 }
