@@ -24,6 +24,8 @@ BUNDLE_ID = "com.hannes.familytree"
 # every host, so ignore this band instead of depending on it. Verified clear
 # of the topmost app content (screen titles start around y=265 on this device).
 IGNORED_TOP_PIXELS = 200
+# Sparse anti-aliasing noise between runs (a few hundred pixels) is not a UI change.
+MIN_CHANGED_FRACTION = 0.0005
 # A plain "iPhone <N>[ Pro]" name. Excludes multi-screen/foldable variants
 # (e.g. "iPhone Duo") and non-numbered ones (e.g. "iPhone Air", "iPhone 17e"),
 # which aren't safe fallbacks: they may have a different aspect ratio, or
@@ -117,7 +119,7 @@ def compare(expected_path, actual_path, diff_path):
         mask = ImageChops.lighter(ImageChops.lighter(red, green), blue)
         mask.paste(0, (0, 0, mask.width, IGNORED_TOP_PIXELS))
         changed = mask.histogram()[255]
-        if changed:
+        if changed > MIN_CHANGED_FRACTION * actual.width * actual.height:
             Image.composite(
                 Image.new("RGB", actual.size, (255, 0, 0)),
                 actual,
