@@ -13,6 +13,7 @@ fun MainViewController() = ComposeUIViewController {
             "dashboard" -> Route.Dashboard
             "settings" -> Route.Settings
             "detail" -> Route.DashboardDetail(1)
+            "familytree" -> Route.FamilyTree
             else -> Route.Login
         }
     } else {

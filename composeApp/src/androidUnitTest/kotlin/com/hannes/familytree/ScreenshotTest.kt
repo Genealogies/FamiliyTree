@@ -26,6 +26,9 @@ class ScreenshotTest {
     @Test
     fun detail() = snapshot(Route.DashboardDetail(1))
 
+    @Test
+    fun familyTree() = snapshot(Route.FamilyTree)
+
     private fun snapshot(route: Route) {
         paparazzi.snapshot {
             App(initialRoute = route)

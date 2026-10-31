@@ -1,9 +1,10 @@
 # UI screenshot checks
 
 Every pull request verifies committed reference screenshots for **Login,
-Dashboard, Settings, and Dashboard Detail (item 1)** on Android and iOS. The
-checks cover the initial light-mode state of each screen, not interaction flows,
-dark mode, or every device size. Add a screenshot case when adding a screen.
+Dashboard, Settings, Dashboard Detail (item 1), and Family Tree** on Android
+and iOS. The checks cover the initial light-mode state of each screen, not
+interaction flows, dark mode, or every device size. Add a screenshot case when
+adding a screen.
 
 CI never records or accepts baselines automatically. A missing baseline or a
 visual difference fails the platform's job. Review the uploaded artifacts for

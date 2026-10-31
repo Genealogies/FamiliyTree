@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 fun DashboardScreen(
     onOpenDetail: (Int) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenFamilyTree: () -> Unit,
     onLogout: () -> Unit
 ) {
     val items = List(20) { index -> index + 1 }
@@ -23,6 +24,7 @@ fun DashboardScreen(
             TopAppBar(
                 title = { Text("Dashboard") },
                 actions = {
+                    TextButton(onClick = onOpenFamilyTree) { Text("Family Tree") }
                     TextButton(onClick = onOpenSettings) { Text("Settings") }
                     TextButton(onClick = onLogout) { Text("Logout") }
                 }
