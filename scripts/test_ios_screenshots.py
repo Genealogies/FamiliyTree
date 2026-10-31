@@ -37,10 +37,20 @@ class CompareTest(unittest.TestCase):
         expected = Image.new("RGB", (10, 300), (100, 100, 100))
         expected.save(self.expected)
         actual = expected.copy()
-        actual.putpixel((0, screenshots.IGNORED_TOP_PIXELS + 1), (109, 100, 100))
+        actual.paste((109, 100, 100), (0, screenshots.IGNORED_TOP_PIXELS + 1, 10, screenshots.IGNORED_TOP_PIXELS + 11))
         actual.save(self.actual)
-        self.assertIn("1 changed pixels", self.compare())
+        self.assertIn("100 changed pixels", self.compare())
         self.assertTrue(self.diff.is_file())
+        with Image.open(self.diff) as diff:
+            self.assertEqual(diff.getpixel((0, screenshots.IGNORED_TOP_PIXELS + 1)), (255, 0, 0))
+
+    def test_sparse_noise_passes(self):
+        expected = Image.new("RGB", (100, 300), (100, 100, 100))
+        expected.save(self.expected)
+        actual = expected.copy()
+        actual.putpixel((0, screenshots.IGNORED_TOP_PIXELS + 1), (200, 50, 50))
+        actual.save(self.actual)
+        self.assertIsNone(self.compare())
 
     def test_resizing_fails(self):
         Image.new("RGB", (11, 10)).save(self.actual)
@@ -61,9 +71,9 @@ class CompareTest(unittest.TestCase):
         expected = Image.new("RGB", (10, 300), (100, 100, 100))
         expected.save(self.expected)
         actual = expected.copy()
-        actual.putpixel((0, screenshots.IGNORED_TOP_PIXELS), (200, 50, 50))
+        actual.paste((200, 50, 50), (0, screenshots.IGNORED_TOP_PIXELS, 10, screenshots.IGNORED_TOP_PIXELS + 10))
         actual.save(self.actual)
-        self.assertIn("1 changed pixels", self.compare())
+        self.assertIn("100 changed pixels", self.compare())
 
 
 if __name__ == "__main__":
