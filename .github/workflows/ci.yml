@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,8 +20,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install screenshot reporter dependencies
-        run: sudo apt-get update && sudo apt-get install -y zsh jq
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -33,15 +30,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK and run unit tests
         run: ./gradlew :composeApp:assembleDebug :composeApp:verifyPaparazziDebug --stacktrace
-      - name: Report screenshot diffs on PR
-        # Runs even if screenshot verification failed so Paparazzi's generated
-        # expected/actual/diff images are still visible on the PR.
-        if: always() && github.event_name == 'pull_request'
-        env:
-          CLASSIC_TOKEN: ${{ secrets.CLASSIC_TOKEN }}
-        run: |
-          zsh screenShotScript/screenShotCompare.sh \
-            --paparazzi composeApp/build composeApp/src/test/snapshots false
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -66,6 +54,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -138,21 +128,6 @@ jobs:
           xcrun simctl shutdown "$IOS_SIMULATOR_UDID"
           python -m unittest discover -s scripts -p 'test_*.py'
           python scripts/ios-screenshots.py --app build/ios/Build/Products/Debug-iphonesimulator/iosApp.app
-      - name: Report screenshot diffs on PR
-        # Best-effort: posts/updates a PR comment with the expected/actual/diff
-        # images via GitHub's own attachment hosting (no external server or
-        # secrets needed). Runs even when the step above failed so the diff
-        # that caused the failure is visible on the PR; never fails the job
-        # itself, since GITHUB_TOKEN is read-only for fork PRs.
-        if: always() && github.event_name == 'pull_request'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python scripts/report_screenshot_diffs.py \
-            --platform ios \
-            --repo "${{ github.repository }}" \
-            --pr "${{ github.event.pull_request.number }}" \
-            --ios-output-dir build/screenshots/ios
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -162,3 +137,31 @@ jobs:
             composeApp/build/reports/tests/iosSimulatorArm64Test/
             composeApp/build/test-results/iosSimulatorArm64Test/
             build/screenshots/ios/
+
+  screenshot-report:
+    name: Report screenshot diffs
+    needs: [android, ios]
+    if: always() && !cancelled() && github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install screenshot reporter dependencies
+        run: sudo apt-get update && sudo apt-get install -y zsh jq
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-test-reports
+          path: composeApp
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-test-reports
+          path: .
+      - name: Report screenshot diffs on PR
+        # A single writer replaces previous reports after both platforms finish.
+        env:
+          CLASSIC_TOKEN: ${{ secrets.CLASSIC_TOKEN }}
+        run: |
+          zsh screenShotScript/screenShotCompare.sh --combined \
+            composeApp/build composeApp/src/test/snapshots build/screenshots/ios false
