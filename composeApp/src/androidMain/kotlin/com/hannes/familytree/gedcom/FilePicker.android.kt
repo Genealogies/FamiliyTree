@@ -5,11 +5,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io.IOException
 
 @Composable
-actual fun rememberFilePicker(onFilePicked: (String?) -> Unit): FilePickerLauncher {
+actual fun rememberFilePicker(onFilePicked: (Result<String>?) -> Unit): FilePickerLauncher {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -19,22 +18,15 @@ actual fun rememberFilePicker(onFilePicked: (String?) -> Unit): FilePickerLaunch
                 return@rememberLauncherForActivityResult
             }
 
-            try {
-                val contentResolver = context.contentResolver
-                val inputStream = contentResolver.openInputStream(uri)
-                val reader = BufferedReader(InputStreamReader(inputStream))
-                val sb = StringBuilder()
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    sb.append(line).append("\n")
-                }
-                reader.close()
-                inputStream?.close()
-                onFilePicked(sb.toString())
+            val result = try {
+                val content = context.contentResolver.openInputStream(uri)
+                    ?.bufferedReader()?.use { it.readText() }
+                    ?: throw IOException("Could not open the selected file")
+                Result.success(content)
             } catch (e: Exception) {
-                e.printStackTrace()
-                onFilePicked(null)
+                Result.failure(e)
             }
+            onFilePicked(result)
         }
     )
 

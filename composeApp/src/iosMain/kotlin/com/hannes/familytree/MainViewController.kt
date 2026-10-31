@@ -10,9 +10,11 @@ import platform.Foundation.NSProcessInfo
 fun MainViewController() = ComposeUIViewController {
     val route = if (Platform.isDebugBinary) {
         when (NSProcessInfo.processInfo.environment["SCREENSHOT_ROUTE"]) {
-            "dashboard" -> Route.Dashboard
+            "members" -> Route.Members
+            "familygroup" -> Route.FamilyGroup
+            "trees" -> Route.Trees
             "settings" -> Route.Settings
-            "detail" -> Route.DashboardDetail(1)
+            "detail" -> Route.Detail(1)
             "familytree" -> Route.FamilyTree
             else -> Route.Login
         }
