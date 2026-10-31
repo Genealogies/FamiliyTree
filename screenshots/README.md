@@ -15,9 +15,12 @@ UI change.
 
 After both platform jobs finish, a single reporting job downloads their test
 artifacts and runs `screenShotScript/screenShotCompare.sh --combined`. It uploads
-the expected/actual/diff images through GitHub's user-attachments API using the
-`CLASSIC_TOKEN` repository secret. Each run with differences creates a **new**
-PR comment containing both platforms' images, then deletes all previous
+one horizontal comparison image per failed screenshot through GitHub's
+user-attachments API using the `CLASSIC_TOKEN` repository secret. Each image
+shows **expected (old) | diff | actual (new)** from left to right; unavailable
+panels are labeled, and the original test artifacts remain unchanged.
+Each run with differences creates a **new**
+PR comment containing both platforms' comparisons, then deletes all previous
 screenshot reports (including older platform-specific comments). A run with no
 differences removes the previous reports without creating a comment.
 
