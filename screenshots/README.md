@@ -62,7 +62,7 @@ rounding differences of up to 8/255 and the top 200px status bar band (clock,
 Wi-Fi, battery); that band is simulator chrome, not app UI, and the
 `simctl status_bar override` that pins it is not reliably honored on every
 host. More than 0.05% of pixels outside that band exceeding the rounding tolerance, or a
-dimension change, fails. Magenta pixels in `*-diff.png` mark differences.
+dimension change, fails. Red pixels in `*-diff.png` mark differences.
 
 ```shell
 python3 -m venv build/screenshot-venv

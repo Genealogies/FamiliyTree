@@ -10,16 +10,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import com.hannes.familytree.ui.tree.FamilyGraph
 import com.hannes.familytree.ui.tree.LazyFamilyTree
 import com.hannes.familytree.ui.tree.sampleFamilyGraph
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FamilyTreeScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    importedGraph: FamilyGraph? = null
 ) {
     val density = LocalDensity.current
-    val graph = remember { sampleFamilyGraph(density) }
+    val graph = importedGraph ?: remember { sampleFamilyGraph(density) }
 
     Scaffold(
         topBar = {

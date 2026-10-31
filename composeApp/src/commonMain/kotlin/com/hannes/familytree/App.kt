@@ -5,11 +5,13 @@ import androidx.compose.runtime.*
 import com.hannes.familytree.ui.navigation.AppRouter
 import com.hannes.familytree.ui.navigation.Route
 import com.hannes.familytree.ui.screens.LoginScreen
+import com.hannes.familytree.ui.tree.FamilyGraph
 
 @Composable
 fun App(initialRoute: Route = Route.Login) {
     MaterialTheme {
         var isLoggedIn by remember { mutableStateOf(initialRoute != Route.Login) }
+        var importedGraph by remember { mutableStateOf<FamilyGraph?>(null) }
         var currentRoute by remember { mutableStateOf(initialRoute) }
 
         if (!isLoggedIn) {
@@ -25,6 +27,8 @@ fun App(initialRoute: Route = Route.Login) {
             AppRouter(
                 route = currentRoute,
                 onNavigate = { currentRoute = it },
+                importedGraph = importedGraph,
+                onGraphImported = { importedGraph = it },
                 onLogout = {
                     isLoggedIn = false
                     currentRoute = Route.Login
