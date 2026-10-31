@@ -104,7 +104,7 @@ def compare(expected_path, actual_path, diff_path):
             comparison = Image.new(
                 "RGB",
                 (expected.width + actual.width, max(expected.height, actual.height)),
-                "magenta",
+                "red",
             )
             comparison.paste(expected, (0, 0))
             comparison.paste(actual, (expected.width, 0))
@@ -119,7 +119,7 @@ def compare(expected_path, actual_path, diff_path):
         changed = mask.histogram()[255]
         if changed:
             Image.composite(
-                Image.new("RGB", actual.size, "magenta"),
+                Image.new("RGB", actual.size, (255, 0, 0)),
                 actual,
                 mask,
             ).save(diff_path)

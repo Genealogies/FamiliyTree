@@ -149,7 +149,7 @@ jobs:
         with:
           submodules: true
       - name: Install screenshot reporter dependencies
-        run: sudo apt-get update && sudo apt-get install -y zsh jq
+        run: sudo apt-get update && sudo apt-get install -y zsh jq python3-pil
       - uses: actions/download-artifact@v4
         with:
           name: android-test-reports
