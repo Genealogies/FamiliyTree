@@ -36,13 +36,25 @@ class ScreenshotTest {
     fun login() = snapshot(Route.Login)
 
     @Test
-    fun dashboard() = snapshot(Route.Dashboard)
+    fun members() = snapshot(Route.Members)
+
+    @Test
+    fun familyGroup() = snapshot(Route.FamilyGroup)
+
+    @Test
+    fun trees() = snapshot(Route.Trees)
 
     @Test
     fun settings() = snapshot(Route.Settings)
 
     @Test
-    fun detail() = snapshot(Route.DashboardDetail(1))
+    fun detail() = snapshot(Route.Detail(1))
+
+    @Test
+    fun familyGroupDetail() = snapshot(Route.Detail(1, Route.FamilyGroup))
+
+    @Test
+    fun treeDetail() = snapshot(Route.Detail(1, Route.Trees))
 
     @Test
     fun familyTree() = snapshot(Route.FamilyTree)

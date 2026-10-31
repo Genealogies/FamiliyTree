@@ -2,6 +2,8 @@ package com.hannes.familytree.gedcom
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.UIKit.*
 import platform.Foundation.*
@@ -9,16 +11,17 @@ import platform.UniformTypeIdentifiers.*
 import platform.darwin.NSObject
 
 @Composable
-actual fun rememberFilePicker(onFilePicked: (String?) -> Unit): FilePickerLauncher {
+actual fun rememberFilePicker(onFilePicked: (Result<String>?) -> Unit): FilePickerLauncher {
+    val currentOnFilePicked by rememberUpdatedState(onFilePicked)
     val launcher = remember {
-        FilePickerLauncherIOS(onFilePicked)
+        FilePickerLauncherIOS { currentOnFilePicked(it) }
     }
     return launcher
 }
 
 @OptIn(ExperimentalForeignApi::class)
 class FilePickerLauncherIOS(
-    private val onFilePicked: (String?) -> Unit
+    private val onFilePicked: (Result<String>?) -> Unit
 ) : FilePickerLauncher {
 
     private val delegate = object : NSObject(), UIDocumentPickerDelegateProtocol {
@@ -27,18 +30,20 @@ class FilePickerLauncherIOS(
             if (url != null) {
                 // Security scoped resource access might be needed depending on where the file is
                 val requestAccess = url.startAccessingSecurityScopedResource()
-                try {
+                val result = try {
                     val content = NSString.stringWithContentsOfURL(url, encoding = NSUTF8StringEncoding, error = null)
-                    onFilePicked(content as String?)
+                        ?: throw IllegalStateException("Could not read the selected file as UTF-8")
+                    Result.success(content)
                 } catch (e: Exception) {
-                    onFilePicked(null)
+                    Result.failure(e)
                 } finally {
                     if (requestAccess) {
                         url.stopAccessingSecurityScopedResource()
                     }
                 }
+                onFilePicked(result)
             } else {
-                onFilePicked(null)
+                onFilePicked(Result.failure(IllegalStateException("No file URL received")))
             }
         }
 
@@ -57,6 +62,10 @@ class FilePickerLauncherIOS(
         val window = UIApplication.sharedApplication.keyWindow
         val rootViewController = window?.rootViewController
 
-        rootViewController?.presentViewController(picker, animated = true, completion = null)
+        if (rootViewController == null) {
+            onFilePicked(Result.failure(IllegalStateException("Could not open the file picker")))
+        } else {
+            rootViewController.presentViewController(picker, animated = true, completion = null)
+        }
     }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture or verify the four app screens on the pinned iOS simulator."""
+"""Capture or verify the app screens on the pinned iOS simulator."""
 
 import argparse
 import json
@@ -16,7 +16,7 @@ from PIL import Image, ImageChops
 ROOT = Path(__file__).resolve().parents[1]
 BASELINES = ROOT / "screenshots/ios"
 OUTPUT = ROOT / "build/screenshots/ios"
-SCREENS = ("login", "dashboard", "settings", "detail", "familytree")
+SCREENS = ("login", "members", "familygroup", "trees", "settings", "detail", "familytree")
 PREFERRED_DEVICE_NAME = "iPhone 17 Pro"
 BUNDLE_ID = "com.hannes.familytree"
 # The status bar (clock/Wi-Fi/battery) is simulator chrome, not app UI. The

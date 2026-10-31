@@ -1,10 +1,17 @@
 # UI screenshot checks
 
 Every pull request verifies committed reference screenshots for **Login,
-Dashboard, Settings, Dashboard Detail (item 1), and Family Tree** on Android
+Members, Family Group, Trees, Settings, Member Detail (item 1), and Family Tree** on Android
 and iOS. The checks cover the initial light-mode state of each screen, not
 interaction flows, dark mode, or every device size. Add a screenshot case when
 adding a screen.
+
+Members, Family Group, and Trees currently share the same 20-item placeholder
+list, with section-specific titles and detail screens. Tabs switch between them;
+the Menu opens Family Tree, Settings, or Logout. Import GED is available on each
+list and in Settings. A successful import opens Family Tree with the parsed data;
+an invalid file displays an error without replacing the existing tree.
+Android also captures the Family Group and Tree detail screens.
 
 CI never records or accepts baselines automatically. A missing baseline or a
 visual difference fails the platform's job. Review the uploaded artifacts for
