@@ -6,6 +6,8 @@ import sys
 import tempfile
 import unittest
 
+from PIL import Image, ImageChops
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "screenShotScript/screenShotCompare.sh"
@@ -70,12 +72,17 @@ else:
         self.baselines = self.root / "snapshots/images"
         self.baselines.mkdir(parents=True)
 
-    def run_reporter(self):
+    def run_reporter(self, mode="--combined"):
+        if mode == "--ios":
+            directories = [str(self.ios)]
+        elif mode == "--paparazzi":
+            directories = [str(self.root / "build"), str(self.root / "snapshots")]
+        else:
+            directories = [
+                str(self.root / "build"), str(self.root / "snapshots"), str(self.ios),
+            ]
         return subprocess.run(
-            [
-                "zsh", str(SCRIPT), "--combined", str(self.root / "build"),
-                str(self.root / "snapshots"), str(self.ios), "false",
-            ],
+            ["zsh", str(SCRIPT), mode, *directories, "false"],
             cwd=self.root, env=self.env, capture_output=True, text=True, timeout=20,
         )
 
@@ -84,14 +91,17 @@ else:
 
     def add_failures(self):
         name = "com.example_ScreenshotTest_dashboard"
-        (self.failures / f"{name}.png").write_bytes(b"actual")
-        (self.failures / f"delta-{name}.png").write_bytes(b"diff")
-        (self.baselines / f"{name}.png").write_bytes(b"expected")
+        Image.new("RGB", (20, 30), "blue").save(self.failures / f"{name}.png")
+        Image.new("RGB", (20, 30), "red").save(self.failures / f"delta-{name}.png")
+        Image.new("RGB", (20, 30), "white").save(self.baselines / f"{name}.png")
         (self.ios / "result.json").write_text(
             '{"failures":["dashboard: changed pixels"]}'
         )
-        for name in ("dashboard", "dashboard-expected", "dashboard-diff"):
-            (self.ios / f"{name}.png").write_bytes(b"image")
+        for name, color in (
+            ("dashboard", "blue"), ("dashboard-expected", "white"),
+            ("dashboard-diff", "magenta"),
+        ):
+            Image.new("RGB", (20, 30), color).save(self.ios / f"{name}.png")
 
     def test_posts_one_combined_comment_then_deletes_all_old_reports(self):
         self.add_failures()
@@ -101,7 +111,8 @@ else:
         posts = [call for call in calls if "POST" in call and "-d" in call]
         self.assertEqual(len(posts), 1)
         body = json.loads(posts[0][posts[0].index("-d") + 1])["body"]
-        self.assertEqual(body.count("![screenshot]"), 6)
+        self.assertEqual(body.count("![screenshot]"), 2)
+        self.assertIn("with 2 screenshot(s)", body)
         self.assertIn("<!-- screenshot-compare:all -->\n\n", body)
         self.assertNotIn("<br/>", body)
         deletes = [call for call in calls if "DELETE" in call]
@@ -110,6 +121,71 @@ else:
             self.assertTrue(call[-1].endswith(f"/{comment_id}"))
             self.assertGreater(calls.index(call), calls.index(posts[0]))
         self.assertFalse(any("PATCH" in call for call in calls))
+        uploads = [call for call in calls if "--data-binary" in call]
+        self.assertEqual(len(uploads), 2)
+        for call, diff_color in zip(uploads, ((255, 0, 0), (255, 0, 255))):
+            path = self.root / "screenshotDiffs" / call[call.index("--data-binary") + 1][1:]
+            with Image.open(path) as image:
+                self.assertEqual(image.size, (60, 30))
+                self.assertEqual(image.getpixel((0, 0)), (255, 255, 255))
+                self.assertEqual(image.getpixel((20, 0)), diff_color)
+                self.assertEqual(image.getpixel((40, 0)), (0, 0, 255))
+        self.assertEqual(len(list((self.root / "screenshotDiffs").glob("*.png"))), 2)
+        self.assertTrue((self.ios / "dashboard-expected.png").exists())
+        self.assertTrue((self.ios / "dashboard-diff.png").exists())
+        self.assertTrue((self.failures / "com.example_ScreenshotTest_dashboard.png").exists())
+
+    def test_missing_expected_and_diff_still_produces_one_comparison(self):
+        (self.ios / "result.json").write_text('{"failures":["dashboard: missing baseline"]}')
+        Image.new("RGB", (160, 30), "blue").save(self.ios / "dashboard.png")
+        result = self.run_reporter()
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        images = list((self.root / "screenshotDiffs").glob("*.png"))
+        self.assertEqual(len(images), 1)
+        with Image.open(images[0]) as image:
+            self.assertEqual(image.size, (480, 30))
+            self.assertEqual(image.getpixel((320, 0)), (0, 0, 255))
+            for x in (0, 160):
+                placeholder = image.crop((x, 0, x + 160, 30))
+                self.assertIsNotNone(
+                    ImageChops.difference(
+                        placeholder, Image.new("RGB", placeholder.size, "white")
+                    ).getbbox()
+                )
+
+    def test_standalone_modes_upload_one_comparison(self):
+        self.add_failures()
+        for mode, platform in (("--ios", "ios"), ("--paparazzi", "android")):
+            with self.subTest(mode=mode):
+                result = self.run_reporter(mode)
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                calls = self.read_calls()
+                uploads = [call for call in calls if "--data-binary" in call]
+                self.assertEqual(len(uploads), 1)
+                posts = [call for call in calls if "POST" in call and "-d" in call]
+                body = json.loads(posts[0][posts[0].index("-d") + 1])["body"]
+                self.assertIn(f"<!-- screenshot-compare:{platform} -->", body)
+                self.assertEqual(body.count("![screenshot]"), 1)
+                self.calls.unlink()
+
+    def test_different_dimensions_are_not_resized_or_cropped(self):
+        self.add_failures()
+        Image.new("RGB", (40, 50), "blue").save(self.ios / "dashboard.png")
+        result = self.run_reporter()
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        image_path = next((self.root / "screenshotDiffs").glob("*ios-dashboard.png"))
+        with Image.open(image_path) as image:
+            self.assertEqual(image.size, (80, 50))
+            self.assertEqual(image.getpixel((0, 29)), (255, 255, 255))
+            self.assertEqual(image.getpixel((20, 29)), (255, 0, 255))
+            self.assertEqual(image.getpixel((20, 30)), (255, 255, 255))
+            self.assertEqual(image.getpixel((79, 49)), (0, 0, 255))
+
+    def test_invalid_image_preserves_old_reports(self):
+        self.add_failures()
+        (self.ios / "dashboard.png").write_bytes(b"invalid")
+        self.assertNotEqual(self.run_reporter().returncode, 0)
+        self.assertFalse(self.calls.exists())
 
     def test_no_differences_only_deletes_old_reports(self):
         result = self.run_reporter()
