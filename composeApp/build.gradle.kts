@@ -1,12 +1,14 @@
+import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
 
 plugins {
     kotlin("multiplatform") version "2.0.21"
     kotlin("plugin.serialization") version "2.0.21"
-    id("com.android.application") version "8.13.2"
+    id("com.android.application") version "9.1.1"
     id("org.jetbrains.compose") version "1.7.1"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
-    id("app.cash.paparazzi") version "1.3.5"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
+    id("app.cash.paparazzi") version "2.0.0-alpha05.1"
 }
 
 kotlin {
@@ -74,6 +76,12 @@ kotlin {
 tasks.withType<KotlinNativeSimulatorTest>().configureEach {
     providers.gradleProperty("iosSimulatorDevice").orNull?.let {
         device = it
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 

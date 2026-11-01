@@ -12,7 +12,7 @@ from PIL import Image, ImageChops, ImageDraw
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ANDROID = "composeApp/src/test/snapshots/images"
+ANDROID = "composeApp/src/androidUnitTest/snapshots/images"
 IOS = "screenshots/ios"
 RED_DIFF = ROOT / "screenShotScript/redDiff.py"
 
