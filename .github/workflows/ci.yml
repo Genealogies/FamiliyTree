@@ -148,6 +148,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Fetch PR base for visual review
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --depth=1 origin "$PR_BASE_SHA"
       - name: Install screenshot reporter dependencies
         run: sudo apt-get update && sudo apt-get install -y zsh jq python3-pil
       - uses: actions/download-artifact@v4
@@ -162,6 +167,15 @@ jobs:
         # A single writer replaces previous reports after both platforms finish.
         env:
           CLASSIC_TOKEN: ${{ secrets.CLASSIC_TOKEN }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
+          python3 scripts/prepare-screenshot-report.py \
+            --base-ref "$PR_BASE_SHA" \
+            --android-build composeApp/build \
+            --android-snapshots composeApp/src/test/snapshots \
+            --ios-dir build/screenshots/ios \
+            --output build/pr-screenshot-report
           zsh screenShotScript/screenShotCompare.sh --combined \
-            composeApp/build composeApp/src/test/snapshots build/screenshots/ios false
+            build/pr-screenshot-report/android-build \
+            build/pr-screenshot-report/android-snapshots \
+            build/pr-screenshot-report/ios false
