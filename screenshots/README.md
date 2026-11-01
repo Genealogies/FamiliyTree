@@ -1,17 +1,64 @@
 # UI screenshot checks
 
 Every pull request verifies committed reference screenshots for **Login,
-Members, Family Group, Trees, Settings, Member Detail (item 1), and Family Tree** on Android
+Members, Family Group, Trees, Settings, all three edit screens, and Family Tree** on Android
 and iOS. The checks cover the initial light-mode state of each screen, not
 interaction flows, dark mode, or every device size. Add a screenshot case when
 adding a screen.
 
-Members, Family Group, and Trees currently share the same 20-item placeholder
-list, with section-specific titles and detail screens. Tabs switch between them;
+New installations start with empty lists. Each tab supports adding, searching,
+sorting, editing, and deleting records, with family-group filters for members
+and trees. Member cards show ID, birth, parents, spouses, and family groups;
+group cards show name, slug, description, and member count; tree cards show
+title, family, root, and the equivalent WordPress shortcode.
+
+Tapping a member opens the native
+editor based on the WordPress Pro plugin's member edit form: name components,
+gender, repeatable births/deaths/events, parent families (pedigree and LDS
+sealing), spouse families (order and events), contacts, notes, custom fields,
+additional information, an image gallery, and family-group assignment.
+Use the Section selector to switch between these areas.
+Children and siblings are derived from parent links; related members can be
+opened from the editor. Save validates relationships and writes members and
+gallery images, family groups, and tree settings together to the app's private
+`members.json`, surviving app restarts. Earlier member-only files are migrated
+on load, preserving existing group assignments. Data is saved atomically;
+load/save failures are displayed rather than overwriting unreadable data.
+Unsaved changes require confirmation before leaving the editor.
+Gallery images are limited to 10 per member and 5 MB per image.
+Additional information is a multiline text field, not WordPress's rich-text
+editor. There is no WordPress server synchronization, media library, publishing
+workflow in this local editor. Imported GEDCOM
+trees remain separate from the local member list.
+
+The Family Group editor follows the plugin's taxonomy form: name, slug,
+description, default tree, possible roots (members without parents), a
+Generate Default Tree action, and a filtered Members Page.
+The Tree editor includes family/root selection and all eight plugin settings
+sections: General, Visibility, Container, Box, Line, Image, Name Text, Other Text.
+Colors use six-digit hex notation. Font families are entered as text rather
+than downloaded from Google Fonts.
+
+View Tree renders the saved group's actual members and parent/spouse links.
+The native preview supports root selection, ancestor/descendant generation
+limits, horizontal/vertical positioning, hiding spouses/female descendants,
+name/date/gender visibility, and hiding living members' birth dates.
+It is **not** a port of the plugin's HTML/CSS renderer: style variants, CSS
+backgrounds, box/line/image/text styling, root highlighting, popup/collapse,
+generation labels, sibling ordering, marriage icons, web links, GT Frontend,
+and Ajax settings are retained but are not rendered by the native preview.
+The editor states this limitation explicitly. There are no WordPress authors,
+roles, remote pages, or publish/trash semantics in this local app.
+
+Deleting records removes related references; deleting a group does not delete
+its members or trees. Tree roots and default trees must belong to their family.
+Tabs switch between sections;
 the Menu opens Family Tree, Settings, or Logout. Import GED is available on each
 list and in Settings. A successful import opens Family Tree with the parsed data;
 an invalid file displays an error without replacing the existing tree.
-Android also captures the Family Group and Tree detail screens.
+Android also captures each member and tree settings section. Screenshot runs
+use fixed sample data and bypass saved genealogy data for
+deterministic baselines.
 
 CI never records or accepts baselines automatically. A missing baseline or a
 visual difference fails the platform's job. Review the uploaded artifacts for

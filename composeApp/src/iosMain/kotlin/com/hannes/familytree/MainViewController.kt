@@ -15,11 +15,13 @@ fun MainViewController() = ComposeUIViewController {
             "trees" -> Route.Trees
             "settings" -> Route.Settings
             "detail" -> Route.Detail(1)
+            "familygroupdetail" -> Route.Detail(1, Route.FamilyGroup)
+            "treedetail" -> Route.Detail(1, Route.Trees)
             "familytree" -> Route.FamilyTree
             else -> Route.Login
         }
     } else {
         Route.Login
     }
-    App(initialRoute = route)
+    App(initialRoute = route, persistMembers = route == Route.Login)
 }
