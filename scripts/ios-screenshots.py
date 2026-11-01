@@ -16,7 +16,10 @@ from PIL import Image, ImageChops
 ROOT = Path(__file__).resolve().parents[1]
 BASELINES = ROOT / "screenshots/ios"
 OUTPUT = ROOT / "build/screenshots/ios"
-SCREENS = ("login", "members", "familygroup", "trees", "settings", "detail", "familytree")
+SCREENS = (
+    "login", "members", "familygroup", "trees", "settings", "detail",
+    "familygroupdetail", "treedetail", "familytree",
+)
 PREFERRED_DEVICE_NAME = "iPhone 17 Pro"
 BUNDLE_ID = "com.hannes.familytree"
 # The status bar (clock/Wi-Fi/battery) is simulator chrome, not app UI. The

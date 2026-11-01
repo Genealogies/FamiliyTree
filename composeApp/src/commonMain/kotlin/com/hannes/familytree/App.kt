@@ -6,10 +6,22 @@ import com.hannes.familytree.ui.navigation.AppRouter
 import com.hannes.familytree.ui.navigation.Route
 import com.hannes.familytree.ui.screens.LoginScreen
 import com.hannes.familytree.ui.tree.FamilyGraph
+import com.hannes.familytree.members.GenealogyData
+import com.hannes.familytree.members.rememberMemberStorage
+import com.hannes.familytree.members.loadGenealogy
+import com.hannes.familytree.members.saveGenealogy
+import androidx.compose.material3.Text
 
 @Composable
-fun App(initialRoute: Route = Route.Login) {
+fun App(initialRoute: Route = Route.Login, persistMembers: Boolean = true) {
     MaterialTheme {
+        val storage = rememberMemberStorage()
+        val loadedData = remember {
+            runCatching {
+                if (persistMembers) storage.loadGenealogy() else GenealogyData.screenshotData()
+            }
+        }
+        var data by remember { mutableStateOf(loadedData.getOrNull() ?: GenealogyData()) }
         var isLoggedIn by remember { mutableStateOf(initialRoute != Route.Login) }
         var importedGraph by remember { mutableStateOf<FamilyGraph?>(null) }
         var currentRoute by remember { mutableStateOf(initialRoute) }
@@ -23,7 +35,10 @@ fun App(initialRoute: Route = Route.Login) {
             )
         }
 
-        if (!isLoggedIn) {
+        if (loadedData.isFailure) {
+            Text("Could not load saved genealogy: ${loadedData.exceptionOrNull()?.message}. " +
+                "Restart the app to retry. Existing data has not been overwritten.")
+        } else if (!isLoggedIn) {
             LoginScreen(
                 onLogin = { username, password ->
                     if (username.isNotBlank() && password.isNotBlank()) {
@@ -36,6 +51,12 @@ fun App(initialRoute: Route = Route.Login) {
         } else {
             AppRouter(
                 route = currentRoute,
+                data = data,
+                onSaveData = { updated ->
+                    updated.validate()
+                    if (persistMembers) storage.saveGenealogy(updated)
+                    data = updated
+                },
                 onNavigate = {
                     if (it is Route.Listing) currentListing = it
                     currentRoute = it

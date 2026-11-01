@@ -9,4 +9,6 @@ sealed class Route {
     data object Settings : Route()
     data object FamilyTree : Route()
     data class Detail(val itemId: Int, val listing: Listing = Members) : Route()
+    data class GroupMembers(val groupId: Int) : Route()
+    data class TreePreview(val treeId: Int) : Route()
 }

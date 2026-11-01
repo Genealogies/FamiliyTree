@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTes
 
 plugins {
     kotlin("multiplatform") version "2.0.21"
+    kotlin("plugin.serialization") version "2.0.21"
     id("com.android.application") version "8.13.2"
     id("org.jetbrains.compose") version "1.7.1"
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
@@ -31,6 +32,7 @@ kotlin {
                 implementation(compose.foundation)
                 implementation(compose.material3)
                 implementation(compose.ui)
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
                 implementation(compose.components.resources)
                 implementation(compose.components.uiToolingPreview)
             }
