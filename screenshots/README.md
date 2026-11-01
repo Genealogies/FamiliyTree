@@ -14,11 +14,24 @@ UI change.
 ## Reviewing diffs on the pull request itself
 
 After both platform jobs finish, a single reporting job downloads their test
-artifacts and runs `screenShotScript/screenShotCompare.sh --combined`. It uploads
+artifacts. `scripts/prepare-screenshot-report.py` compares committed reference
+images against the PR event's base commit and combines those changes with
+test failures in a separate staging directory. The reporting checkout uses
+the PR head commit; the base commit is fetched explicitly, so the comparison
+does not depend on a shallow checkout containing branch history.
+Updated references are reported even when tests pass; added and removed
+screenshots use labeled placeholder panels. PNG metadata-only changes are
+ignored. A failed test uses its rendered actual image, not the new reference.
+Unchanged references with passing tests are omitted.
+
+The job then runs `screenShotScript/screenShotCompare.sh --combined`. It uploads
 one horizontal comparison image per failed screenshot through GitHub's
 user-attachments API using the `CLASSIC_TOKEN` repository secret. Each image
 shows **expected (old) | diff | actual (new)** from left to right; unavailable
 panels are labeled, and the original test artifacts remain unchanged.
+For changed references, expected means the **PR-base reference**; for test
+failures without a reference change, it means the current test reference.
+Original baselines and test artifacts are never modified.
 Each run with differences creates a **new**
 PR comment containing both platforms' comparisons, then deletes all previous
 screenshot reports (including older platform-specific comments). A run with no
