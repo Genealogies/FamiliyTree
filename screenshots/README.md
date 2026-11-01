@@ -101,7 +101,9 @@ uploaded test artifacts to review their differences.
 
 Paparazzi renders the real Compose `App` on the JVM using a fixed Pixel 5 device
 configuration, without an emulator. References are in
-`composeApp/src/test/snapshots/images`. Comparison allows no pixel differences.
+`composeApp/src/androidUnitTest/snapshots/images`. Comparison allows no pixel
+differences. Paparazzi 2 requires a Java 21 or newer runtime; Android app
+bytecode remains targeted to Java 17.
 
 ```shell
 ./gradlew :composeApp:verifyPaparazziDebug
