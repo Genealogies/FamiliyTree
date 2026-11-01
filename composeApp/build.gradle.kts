@@ -3,9 +3,9 @@ import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTes
 plugins {
     kotlin("multiplatform") version "2.0.21"
     kotlin("plugin.serialization") version "2.0.21"
-    id("com.android.application") version "8.13.2"
+    id("com.android.application") version "9.1.1"
     id("org.jetbrains.compose") version "1.7.1"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
     id("app.cash.paparazzi") version "1.3.5"
 }
 
