@@ -71,7 +71,7 @@ fun MembersScreen(
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Family Tree") },
+                                text = { Text("Family Tree Test") },
                                 onClick = {
                                     menuExpanded = false
                                     onOpenFamilyTree()
