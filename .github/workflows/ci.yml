@@ -90,7 +90,10 @@ jobs:
           if not ios_runtimes:
               sys.exit("No available iPhone simulator found")
           def runtime_version(runtime):
-              return tuple(int(part) for part in runtime.rsplit(".iOS-", 1)[1].split("-"))
+              match = re.search(r"\.iOS-(\d+(?:-\d+)*)", runtime)
+              if match is None:
+                  sys.exit(f"Unrecognized iOS simulator runtime: {runtime}")
+              return tuple(int(part) for part in match.group(1).split("-"))
           runtime = max(ios_runtimes, key=runtime_version)
           candidates = devices[runtime]
           device = next((d for d in candidates if d["name"] == "iPhone 17 Pro"), None)
@@ -155,15 +158,20 @@ jobs:
         run: git fetch --no-tags --depth=1 origin "$PR_BASE_SHA"
       - name: Install screenshot reporter dependencies
         run: sudo apt-get update && sudo apt-get install -y zsh jq python3-pil
-      - uses: actions/download-artifact@v4
+      - id: android-reports
+        uses: actions/download-artifact@v4
         with:
           name: android-test-reports
           path: composeApp
-      - uses: actions/download-artifact@v4
+        continue-on-error: true
+      - id: ios-reports
+        uses: actions/download-artifact@v4
         with:
           name: ios-test-reports
           path: .
+        continue-on-error: true
       - name: Report screenshot diffs on PR
+        if: steps.android-reports.outcome == 'success' && steps.ios-reports.outcome == 'success'
         # A single writer replaces previous reports after both platforms finish.
         env:
           CLASSIC_TOKEN: ${{ secrets.CLASSIC_TOKEN }}
